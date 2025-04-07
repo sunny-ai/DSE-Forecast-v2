@@ -12,7 +12,7 @@ DSE Forecast v2 is a project designed to provide accurate and efficient forecast
 ## Installation
 1. Clone the repository:
     ```bash
-    git clone https://github.com/your-repo/DSE-Forecast-v2.git
+    git clone https://github.com/sunny-ai/DSE-Forecast-v2.git
     ```
 2. Navigate to the project directory:
     ```bash
