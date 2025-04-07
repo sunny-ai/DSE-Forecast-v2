@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>DSE Stock Price Prediction</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" />
+    <style>
+        body {
+            background: linear-gradient(135deg, #e0f7fa, #e3f2fd);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            padding: 20px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .card {
+            border: none;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .card-header {
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .card-title {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+
+        .bg-teal {
+            background: #26c6da;
+            color: #fff;
+        }
+
+        .bg-coral {
+            background: #ff5252;
+            color: #fff;
+        }
+
+        .bg-yellow {
+            background: #ffc400;
+            color: #222;
+        }
+
+        .time-display {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #fff;
+            border-radius: 5px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            display: inline-block;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <div class="time-display" id="datetime"></div>
+        <h1 class="mb-4">DSE Stock Price Prediction</h1>
+
+        <form method="POST" id="companyForm" class="mb-4">
+            <div class="form-group">
+                <label for="trading_code">Select Trading Code</label>
+                <select class="form-control" id="trading_code" name="trading_code" required
+                    onchange="this.form.submit()">
+                    <option value="">-- Select Trading Code --</option>
+                    {% for code in companies %}
+                    <option value="{{ code }}" {% if code==request.form.trading_code %}selected{% endif %}>{{ code }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+
+        <div class="row">
+            <div class="col-md-4">
+                <div class="card bg-teal mb-4 h-100">
+                    <div class="card-header">Last Closing Price</div>
+                    <div class="card-body">
+                        <h5 class="card-title count" data-count="{{ last_close }}">0</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-coral mb-4 h-100">
+                    <div class="card-header">Today's Price</div>
+                    <div class="card-body">
+                        <h5 class="card-title count" data-count="{{ prediction }}">0</h5>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-yellow mb-4 h-100">
+                    <div class="card-header">Accuracy (MAPE %)</div>
+                    <div class="card-body">
+                        <h5 class="card-title count"
+                            data-count="{{ accuracy|round(2) if accuracy is not none else 0 }}">0</h5>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">Next 7‑Day Forecast</div>
+            <div class="card-body">
+                <canvas id="predictionChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script>
+        // Counter animation
+        $('.count').each(function () {
+            var $this = $(this);
+            var countTo = parseFloat($this.attr('data-count')) || 0;
+            $({ countNum: 0 }).animate({ countNum: countTo }, {
+                duration: 1500,
+                easing: 'swing',
+                step: function () {
+                    $this.text(this.countNum.toFixed(2));
+                },
+                complete: function () {
+                    $this.text(countTo.toFixed(2));
+                }
+            });
+        });
+
+        // Digital clock
+        function updateDateTime() {
+            const now = new Date();
+            const date = now.toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+            const time = now.toLocaleTimeString(undefined, { hour12: false });
+            document.getElementById('datetime').textContent = `${date} | ${time}`;
+        }
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+
+        // Chart.js
+        const dates = {{ next_dates| tojson }};
+        const preds = {{ next_preds| tojson }};
+        if (dates.length) {
+            const ctx = document.getElementById('predictionChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: "7-Day Forecast",
+                        data: preds,
+                        backgroundColor: 'rgba(38, 198, 218, 0.2)',
+                        borderColor: '#26c6da',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#26c6da',
+                        pointBorderColor: '#fff',
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { backgroundColor: '#fff', titleColor: '#000', bodyColor: '#000' }
+                    },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { grid: { color: 'rgba(0, 0, 0, 0.1)' } }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

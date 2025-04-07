@@ -1,0 +1,9 @@
+flask
+numpy
+pandas
+tensorflow
+scikit-learn
+beautifulsoup4
+requests
+holidays
+sqlite3
